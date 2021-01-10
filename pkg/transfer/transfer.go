@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/artrey/bgo-adv-errors/pkg/card"
 	"github.com/artrey/bgo-adv-errors/pkg/transaction"
+	"strings"
 )
 
 type CommissionEvaluator func(val int64) int64
@@ -31,7 +32,12 @@ func NewService(cardSvc *card.Service, transactionSvc *transaction.Service, comm
 var (
 	NonPositiveAmount = errors.New("attempt to transfer negative or zero sum")
 	NotEnoughMoney    = errors.New("not enough money on card to transfer")
+	CardNotFound      = errors.New("card not found in bank")
 )
+
+func checkOwning(cardNumber, issuerNumber string) bool {
+	return strings.HasPrefix(cardNumber, issuerNumber)
+}
 
 func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
 	if amount <= 0 {
@@ -39,7 +45,14 @@ func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
 	}
 
 	fromCard := s.CardSvc.FindCard(from)
+	if fromCard == nil && checkOwning(from, s.CardSvc.IssuerNumber) {
+		return 0, CardNotFound
+	}
+
 	toCard := s.CardSvc.FindCard(to)
+	if toCard == nil && checkOwning(to, s.CardSvc.IssuerNumber) {
+		return 0, CardNotFound
+	}
 
 	var commission int64 = 0
 	if fromCard == nil && toCard == nil {
@@ -54,10 +67,8 @@ func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
 	}
 	total := amount + commission
 
-	if fromCard != nil {
-		if !fromCard.Withdraw(total) {
-			return total, NotEnoughMoney
-		}
+	if fromCard != nil && !fromCard.Withdraw(total) {
+		return total, NotEnoughMoney
 	}
 
 	if toCard != nil {

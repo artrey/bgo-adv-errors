@@ -29,13 +29,13 @@ func TestService_Card2Card(t *testing.T) {
 		{
 			name: "Transfer negative sum",
 			fields: fields{
-				CardSvc: nil,
+				CardSvc:        nil,
 				TransactionSvc: nil,
-				commissions: transfer.Commissions{},
+				commissions:    transfer.Commissions{},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "5106 2102 ...",
 				amount: -500_00,
 			},
 			wantTotal: 0,
@@ -44,13 +44,13 @@ func TestService_Card2Card(t *testing.T) {
 		{
 			name: "Transfer zero sum",
 			fields: fields{
-				CardSvc: nil,
+				CardSvc:        nil,
 				TransactionSvc: nil,
-				commissions: transfer.Commissions{},
+				commissions:    transfer.Commissions{},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "5106 2102 ...",
 				amount: 0,
 			},
 			wantTotal: 0,
@@ -60,14 +60,15 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Inner success",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
 					Cards: []*card.Card{
 						{
 							Id:       1,
 							Issuer:   "Visa",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0001",
+							Number:   "5106 2101 ...",
 							Icon:     "...",
 						},
 						{
@@ -75,7 +76,7 @@ func TestService_Card2Card(t *testing.T) {
 							Issuer:   "MasterCard",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0002",
+							Number:   "5106 2102 ...",
 							Icon:     "...",
 						},
 					},
@@ -94,8 +95,8 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "5106 2102 ...",
 				amount: 500_00,
 			},
 			wantTotal: 510_00,
@@ -105,14 +106,15 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Inner not enough",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
 					Cards: []*card.Card{
 						{
 							Id:       1,
 							Issuer:   "Visa",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0001",
+							Number:   "5106 2101 ...",
 							Icon:     "...",
 						},
 						{
@@ -120,7 +122,7 @@ func TestService_Card2Card(t *testing.T) {
 							Issuer:   "MasterCard",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0002",
+							Number:   "5106 2102 ...",
 							Icon:     "...",
 						},
 					},
@@ -139,8 +141,8 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "5106 2102 ...",
 				amount: 1000_00,
 			},
 			wantTotal: 1010_00,
@@ -150,14 +152,15 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Inner-outer success",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
 					Cards: []*card.Card{
 						{
 							Id:       1,
 							Issuer:   "Visa",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0001",
+							Number:   "5106 2101 ...",
 							Icon:     "...",
 						},
 					},
@@ -176,8 +179,8 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "0000 2102 ...",
 				amount: 500_00,
 			},
 			wantTotal: 510_00,
@@ -187,14 +190,15 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Inner-outer not enough",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
 					Cards: []*card.Card{
 						{
 							Id:       1,
 							Issuer:   "Visa",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0001",
+							Number:   "5106 2101 ...",
 							Icon:     "...",
 						},
 					},
@@ -213,8 +217,8 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0001",
-				to:     "0002",
+				from:   "5106 2101 ...",
+				to:     "0000 2102 ...",
 				amount: 1000_00,
 			},
 			wantTotal: 1010_00,
@@ -224,14 +228,15 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Outer-inner success",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
 					Cards: []*card.Card{
 						{
 							Id:       1,
 							Issuer:   "Visa",
 							Balance:  1000_00,
 							Currency: "RUB",
-							Number:   "0001",
+							Number:   "5106 2101 ...",
 							Icon:     "...",
 						},
 					},
@@ -250,8 +255,8 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0002",
-				to:     "0001",
+				from:   "0000 2102 ...",
+				to:     "5106 2101 ...",
 				amount: 1000_00,
 			},
 			wantTotal: 1000_00,
@@ -261,8 +266,9 @@ func TestService_Card2Card(t *testing.T) {
 			name: "Outer success",
 			fields: fields{
 				CardSvc: &card.Service{
-					BankName: "Tinkoff",
-					Cards:    []*card.Card{},
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
+					Cards:        []*card.Card{},
 				},
 				TransactionSvc: transaction.NewService(),
 				commissions: transfer.Commissions{
@@ -278,22 +284,81 @@ func TestService_Card2Card(t *testing.T) {
 				},
 			},
 			args: args{
-				from:   "0002",
-				to:     "0001",
+				from:   "0000 2101 ...",
+				to:     "0000 2102 ...",
 				amount: 1000_00,
 			},
 			wantTotal: 1030_00,
 			wantError: nil,
 		},
+		{
+			name: "From card not found",
+			fields: fields{
+				CardSvc: &card.Service{
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
+					Cards:        []*card.Card{},
+				},
+				TransactionSvc: transaction.NewService(),
+				commissions: transfer.Commissions{
+					FromInner: func(val int64) int64 {
+						return int64(math.Max(float64(val*5/1000), 10_00))
+					},
+					ToInner: func(val int64) int64 {
+						return 0
+					},
+					FromOuterToOuter: func(val int64) int64 {
+						return int64(math.Max(float64(val*15/1000), 30_00))
+					},
+				},
+			},
+			args: args{
+				from:   "5106 2101 ...",
+				to:     "0000 2102 ...",
+				amount: 1000_00,
+			},
+			wantTotal: 0,
+			wantError: transfer.CardNotFound,
+		},
+		{
+			name: "To card not found",
+			fields: fields{
+				CardSvc: &card.Service{
+					BankName:     "Tinkoff",
+					IssuerNumber: "5106 21",
+					Cards:        []*card.Card{},
+				},
+				TransactionSvc: transaction.NewService(),
+				commissions: transfer.Commissions{
+					FromInner: func(val int64) int64 {
+						return int64(math.Max(float64(val*5/1000), 10_00))
+					},
+					ToInner: func(val int64) int64 {
+						return 0
+					},
+					FromOuterToOuter: func(val int64) int64 {
+						return int64(math.Max(float64(val*15/1000), 30_00))
+					},
+				},
+			},
+			args: args{
+				from:   "0000 2101 ...",
+				to:     "5106 2102 ...",
+				amount: 1000_00,
+			},
+			wantTotal: 0,
+			wantError: transfer.CardNotFound,
+		},
 	}
+
 	for _, tt := range tests {
 		s := transfer.NewService(tt.fields.CardSvc, tt.fields.TransactionSvc, tt.fields.commissions)
 		gotTotal, gotError := s.Card2Card(tt.args.from, tt.args.to, tt.args.amount)
 		if gotTotal != tt.wantTotal {
-			t.Errorf("Card2Card() gotTotal = %v, want %v", gotTotal, tt.wantTotal)
+			t.Errorf("%v: gotTotal = %v, want %v", tt.name, gotTotal, tt.wantTotal)
 		}
 		if gotError != tt.wantError {
-			t.Errorf("Card2Card() gotError = %v, want %v", gotError, tt.wantError)
+			t.Errorf("%v: gotError = %v, want %v", tt.name, gotError, tt.wantError)
 		}
 	}
 }
