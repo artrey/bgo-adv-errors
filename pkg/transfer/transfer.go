@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/artrey/bgo-adv-errors/pkg/card"
 	"github.com/artrey/bgo-adv-errors/pkg/transaction"
+	"strconv"
 	"strings"
 )
 
@@ -33,15 +34,50 @@ var (
 	NonPositiveAmount = errors.New("attempt to transfer negative or zero sum")
 	NotEnoughMoney    = errors.New("not enough money on card to transfer")
 	CardNotFound      = errors.New("card not found in bank")
+	InvalidCardNumber = errors.New("card number is invalid")
 )
 
 func checkOwning(cardNumber, issuerNumber string) bool {
 	return strings.HasPrefix(cardNumber, issuerNumber)
 }
 
+func IsValidCardNumber(number string) bool {
+	numberStr := strings.Split(strings.ReplaceAll(number, " ", ""), "")
+	if len(numberStr) == 0 {
+		return false
+	}
+
+	numberDigits := make([]int, 0, len(number))
+	for _, val := range numberStr {
+		digit, err := strconv.Atoi(val)
+		if err != nil {
+			return false
+		}
+		numberDigits = append(numberDigits, digit)
+	}
+
+	for ri := len(numberDigits) - 2; ri >= 0; ri -= 2 {
+		val := numberDigits[ri] * 2
+		if val > 9 {
+			val -= 9
+		}
+		numberDigits[ri] = val
+	}
+
+	result := 0
+	for _, val := range numberDigits {
+		result += val
+	}
+	return result % 10 == 0
+}
+
 func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
 	if amount <= 0 {
 		return 0, NonPositiveAmount
+	}
+
+	if !IsValidCardNumber(from) || !IsValidCardNumber(to) {
+		return 0, InvalidCardNumber
 	}
 
 	fromCard := s.CardSvc.FindCard(from)
