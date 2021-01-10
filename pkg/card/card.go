@@ -10,8 +10,9 @@ type Card struct {
 }
 
 type Service struct {
-	BankName string
-	Cards    []*Card
+	BankName     string
+	IssuerNumber string
+	Cards        []*Card
 }
 
 func (c *Card) Withdraw(amount int64) bool {
@@ -26,10 +27,11 @@ func (c *Card) AddMoney(amount int64) {
 	c.Balance += amount
 }
 
-func NewService(bankName string) *Service {
+func NewService(bankName, issuerNumber string) *Service {
 	return &Service{
-		BankName: bankName,
-		Cards:    []*Card{},
+		BankName:     bankName,
+		IssuerNumber: issuerNumber,
+		Cards:        []*Card{},
 	}
 }
 

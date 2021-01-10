@@ -1,8 +1,11 @@
 package transfer
 
 import (
+	"errors"
 	"github.com/artrey/bgo-adv-errors/pkg/card"
 	"github.com/artrey/bgo-adv-errors/pkg/transaction"
+	"strconv"
+	"strings"
 )
 
 type CommissionEvaluator func(val int64) int64
@@ -27,9 +30,65 @@ func NewService(cardSvc *card.Service, transactionSvc *transaction.Service, comm
 	}
 }
 
-func (s *Service) Card2Card(from, to string, amount int64) (total int64, ok bool) {
+var (
+	NonPositiveAmount = errors.New("attempt to transfer negative or zero sum")
+	NotEnoughMoney    = errors.New("not enough money on card to transfer")
+	CardNotFound      = errors.New("card not found in bank")
+	InvalidCardNumber = errors.New("card number is invalid")
+)
+
+func checkOwning(cardNumber, issuerNumber string) bool {
+	return strings.HasPrefix(cardNumber, issuerNumber)
+}
+
+func IsValidCardNumber(number string) bool {
+	numberStr := strings.Split(strings.ReplaceAll(number, " ", ""), "")
+	if len(numberStr) == 0 {
+		return false
+	}
+
+	numberDigits := make([]int, 0, len(number))
+	for _, val := range numberStr {
+		digit, err := strconv.Atoi(val)
+		if err != nil {
+			return false
+		}
+		numberDigits = append(numberDigits, digit)
+	}
+
+	for ri := len(numberDigits) - 2; ri >= 0; ri -= 2 {
+		val := numberDigits[ri] * 2
+		if val > 9 {
+			val -= 9
+		}
+		numberDigits[ri] = val
+	}
+
+	result := 0
+	for _, val := range numberDigits {
+		result += val
+	}
+	return result % 10 == 0
+}
+
+func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
+	if amount <= 0 {
+		return 0, NonPositiveAmount
+	}
+
+	if !IsValidCardNumber(from) || !IsValidCardNumber(to) {
+		return 0, InvalidCardNumber
+	}
+
 	fromCard := s.CardSvc.FindCard(from)
+	if fromCard == nil && checkOwning(from, s.CardSvc.IssuerNumber) {
+		return 0, CardNotFound
+	}
+
 	toCard := s.CardSvc.FindCard(to)
+	if toCard == nil && checkOwning(to, s.CardSvc.IssuerNumber) {
+		return 0, CardNotFound
+	}
 
 	var commission int64 = 0
 	if fromCard == nil && toCard == nil {
@@ -42,20 +101,17 @@ func (s *Service) Card2Card(from, to string, amount int64) (total int64, ok bool
 			commission += s.commissions.FromInner(amount)
 		}
 	}
-	total = amount + commission
+	total := amount + commission
 
-	ok = true
-	if fromCard != nil {
-		ok = fromCard.Withdraw(total)
+	if fromCard != nil && !fromCard.Withdraw(total) {
+		return total, NotEnoughMoney
 	}
 
-	if ok && toCard != nil {
+	if toCard != nil {
 		toCard.AddMoney(amount)
 	}
 
-	if ok {
-		s.TransactionSvc.Add(from, to, amount, total)
-	}
+	s.TransactionSvc.Add(from, to, amount, total)
 
-	return
+	return total, nil
 }
