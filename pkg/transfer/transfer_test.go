@@ -1,8 +1,9 @@
-package transfer
+package transfer_test
 
 import (
 	"github.com/artrey/bgo-adv-errors/pkg/card"
 	"github.com/artrey/bgo-adv-errors/pkg/transaction"
+	"github.com/artrey/bgo-adv-errors/pkg/transfer"
 	"math"
 	"testing"
 )
@@ -11,7 +12,7 @@ func TestService_Card2Card(t *testing.T) {
 	type fields struct {
 		CardSvc        *card.Service
 		TransactionSvc *transaction.Service
-		commissions    Commissions
+		commissions    transfer.Commissions
 	}
 	type args struct {
 		from   string
@@ -23,8 +24,38 @@ func TestService_Card2Card(t *testing.T) {
 		fields    fields
 		args      args
 		wantTotal int64
-		wantOk    bool
+		wantError error
 	}{
+		{
+			name: "Transfer negative sum",
+			fields: fields{
+				CardSvc: nil,
+				TransactionSvc: nil,
+				commissions: transfer.Commissions{},
+			},
+			args: args{
+				from:   "0001",
+				to:     "0002",
+				amount: -500_00,
+			},
+			wantTotal: 0,
+			wantError: transfer.NonPositiveAmount,
+		},
+		{
+			name: "Transfer zero sum",
+			fields: fields{
+				CardSvc: nil,
+				TransactionSvc: nil,
+				commissions: transfer.Commissions{},
+			},
+			args: args{
+				from:   "0001",
+				to:     "0002",
+				amount: 0,
+			},
+			wantTotal: 0,
+			wantError: transfer.NonPositiveAmount,
+		},
 		{
 			name: "Inner success",
 			fields: fields{
@@ -50,7 +81,7 @@ func TestService_Card2Card(t *testing.T) {
 					},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -68,10 +99,10 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 500_00,
 			},
 			wantTotal: 510_00,
-			wantOk:    true,
+			wantError: nil,
 		},
 		{
-			name: "Inner fail",
+			name: "Inner not enough",
 			fields: fields{
 				CardSvc: &card.Service{
 					BankName: "Tinkoff",
@@ -95,7 +126,7 @@ func TestService_Card2Card(t *testing.T) {
 					},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -113,7 +144,7 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 1000_00,
 			},
 			wantTotal: 1010_00,
-			wantOk:    false,
+			wantError: transfer.NotEnoughMoney,
 		},
 		{
 			name: "Inner-outer success",
@@ -132,7 +163,7 @@ func TestService_Card2Card(t *testing.T) {
 					},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -150,10 +181,10 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 500_00,
 			},
 			wantTotal: 510_00,
-			wantOk:    true,
+			wantError: nil,
 		},
 		{
-			name: "Inner-outer fail",
+			name: "Inner-outer not enough",
 			fields: fields{
 				CardSvc: &card.Service{
 					BankName: "Tinkoff",
@@ -169,7 +200,7 @@ func TestService_Card2Card(t *testing.T) {
 					},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -187,7 +218,7 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 1000_00,
 			},
 			wantTotal: 1010_00,
-			wantOk:    false,
+			wantError: transfer.NotEnoughMoney,
 		},
 		{
 			name: "Outer-inner success",
@@ -206,7 +237,7 @@ func TestService_Card2Card(t *testing.T) {
 					},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -224,7 +255,7 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 1000_00,
 			},
 			wantTotal: 1000_00,
-			wantOk:    true,
+			wantError: nil,
 		},
 		{
 			name: "Outer success",
@@ -234,7 +265,7 @@ func TestService_Card2Card(t *testing.T) {
 					Cards:    []*card.Card{},
 				},
 				TransactionSvc: transaction.NewService(),
-				commissions: Commissions{
+				commissions: transfer.Commissions{
 					FromInner: func(val int64) int64 {
 						return int64(math.Max(float64(val*5/1000), 10_00))
 					},
@@ -252,21 +283,17 @@ func TestService_Card2Card(t *testing.T) {
 				amount: 1000_00,
 			},
 			wantTotal: 1030_00,
-			wantOk:    true,
+			wantError: nil,
 		},
 	}
 	for _, tt := range tests {
-		s := &Service{
-			CardSvc:        tt.fields.CardSvc,
-			TransactionSvc: tt.fields.TransactionSvc,
-			commissions:    tt.fields.commissions,
-		}
-		gotTotal, gotOk := s.Card2Card(tt.args.from, tt.args.to, tt.args.amount)
+		s := transfer.NewService(tt.fields.CardSvc, tt.fields.TransactionSvc, tt.fields.commissions)
+		gotTotal, gotError := s.Card2Card(tt.args.from, tt.args.to, tt.args.amount)
 		if gotTotal != tt.wantTotal {
 			t.Errorf("Card2Card() gotTotal = %v, want %v", gotTotal, tt.wantTotal)
 		}
-		if gotOk != tt.wantOk {
-			t.Errorf("Card2Card() gotOk = %v, want %v", gotOk, tt.wantOk)
+		if gotError != tt.wantError {
+			t.Errorf("Card2Card() gotError = %v, want %v", gotError, tt.wantError)
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"errors"
 	"github.com/artrey/bgo-adv-errors/pkg/card"
 	"github.com/artrey/bgo-adv-errors/pkg/transaction"
 )
@@ -27,7 +28,16 @@ func NewService(cardSvc *card.Service, transactionSvc *transaction.Service, comm
 	}
 }
 
-func (s *Service) Card2Card(from, to string, amount int64) (total int64, ok bool) {
+var (
+	NonPositiveAmount = errors.New("attempt to transfer negative or zero sum")
+	NotEnoughMoney    = errors.New("not enough money on card to transfer")
+)
+
+func (s *Service) Card2Card(from, to string, amount int64) (int64, error) {
+	if amount <= 0 {
+		return 0, NonPositiveAmount
+	}
+
 	fromCard := s.CardSvc.FindCard(from)
 	toCard := s.CardSvc.FindCard(to)
 
@@ -42,20 +52,19 @@ func (s *Service) Card2Card(from, to string, amount int64) (total int64, ok bool
 			commission += s.commissions.FromInner(amount)
 		}
 	}
-	total = amount + commission
+	total := amount + commission
 
-	ok = true
 	if fromCard != nil {
-		ok = fromCard.Withdraw(total)
+		if !fromCard.Withdraw(total) {
+			return total, NotEnoughMoney
+		}
 	}
 
-	if ok && toCard != nil {
+	if toCard != nil {
 		toCard.AddMoney(amount)
 	}
 
-	if ok {
-		s.TransactionSvc.Add(from, to, amount, total)
-	}
+	s.TransactionSvc.Add(from, to, amount, total)
 
-	return
+	return total, nil
 }
